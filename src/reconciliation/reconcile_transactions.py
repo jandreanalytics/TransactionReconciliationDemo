@@ -1,18 +1,59 @@
 """
 Reconciliation script to analyze discrepancies between POS and processor data
-This is an alternative to using Jupyter notebook when it's not installed
+This version reads databases directly from AWS S3
 """
+import os
+from dotenv import load_dotenv
 import pandas as pd
 import numpy as np
 import sqlite3
 import matplotlib.pyplot as plt
 import seaborn as sns
-import os
+import boto3
+from io import BytesIO
 from datetime import datetime, timedelta
+import tempfile
+
+# Load environment variables from .env file
+load_dotenv()
+
+# Verify AWS credentials are loaded
+aws_access_key = os.getenv('AWS_ACCESS_KEY_ID')
+aws_secret_key = os.getenv('AWS_SECRET_ACCESS_KEY')
+aws_region = os.getenv('AWS_DEFAULT_REGION')
+
+if not all([aws_access_key, aws_secret_key, aws_region]):
+    raise EnvironmentError("AWS credentials not found in environment variables")
+
+# Initialize AWS session with credentials
+session = boto3.Session(
+    aws_access_key_id=aws_access_key,
+    aws_secret_access_key=aws_secret_key,
+    region_name=aws_region
+)
 
 def ensure_directory_exists(path):
     """Make sure the directory exists for output files"""
     os.makedirs(os.path.dirname(path), exist_ok=True)
+
+def download_db_from_s3(bucket, key, local_path=None):
+    """Download SQLite database from S3 to a local temporary file"""
+    s3 = session.client('s3')  # Use the session we created
+    
+    if local_path is None:
+        # Create a temporary file
+        local_path = tempfile.NamedTemporaryFile(suffix='.db', delete=False).name
+    
+    print(f"Downloading {key} from S3 bucket {bucket} to {local_path}")
+    s3.download_file(bucket, key, local_path)
+    
+    return local_path
+
+def upload_results_to_s3(local_path, bucket, key):
+    """Upload results file to S3"""
+    s3 = session.client('s3')
+    print(f"Uploading {local_path} to S3 bucket {bucket} as {key}")
+    s3.upload_file(local_path, bucket, key)
 
 def main():
     print("Starting Gift Card Transaction Reconciliation...\n")
@@ -21,12 +62,39 @@ def main():
     sns.set(style="whitegrid")
     plt.rcParams['figure.figsize'] = [12, 8]
     
-    # Define paths to SQLite database files
-    pos_db_path = "data/db/pos_system.db"
-    proc_db_path = "data/db/processor.db"
+    # Get project root directory
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    project_root = os.path.normpath(os.path.join(script_dir, '..', '..'))
+    db_dir = os.path.join(project_root, 'data', 'db')
+    processed_dir = os.path.join(project_root, 'data', 'processed')
     
-    print(f"Connecting to POS database: {pos_db_path}")
-    print(f"Connecting to processor database: {proc_db_path}")
+    # Ensure directories exist
+    os.makedirs(db_dir, exist_ok=True)
+    os.makedirs(processed_dir, exist_ok=True)
+    
+    try:
+        # AWS credentials working, proceed with S3 access
+        bucket_name = "gift-card-demo-processed"
+        pos_db_key = "pos_system.db"
+        proc_db_key = "processor.db"
+        
+        print(f"Accessing databases from AWS S3...")
+        
+        # Try to download files directly instead of checking bucket access
+        pos_db_path = download_db_from_s3(bucket_name, pos_db_key)
+        proc_db_path = download_db_from_s3(bucket_name, proc_db_key)
+        
+    except Exception as e:
+        print("Error connecting to AWS. Please verify your credentials and permissions.")
+        print(f"Error details: {str(e)}")
+        print("\nFalling back to local database files...")
+        
+        # Use local database files instead
+        pos_db_path = os.path.join(db_dir, "pos_system.db")
+        proc_db_path = os.path.join(db_dir, "processor.db")
+        
+        if not all(os.path.exists(p) for p in [pos_db_path, proc_db_path]):
+            raise FileNotFoundError("Local database files not found. Please ensure databases are in data/db directory.")
     
     # Connect to POS database and load transactions
     pos_conn = sqlite3.connect(pos_db_path)
@@ -64,8 +132,11 @@ def main():
     print(f"Missing in processor: {len(missing_in_processor)} transactions")
     
     # 2. Amount discrepancies
-    matched = reconciled.dropna(subset=['transaction_id_pos', 'transaction_id_proc'])
-    matched['amount_diff'] = matched['amount_pos'] - matched['amount_proc']
+    # Fix the SettingWithCopyWarning
+    # Create a proper copy for matched transactions
+    matched = reconciled.dropna(subset=['transaction_id_pos', 'transaction_id_proc']).copy()
+    # Use loc for assignment
+    matched.loc[:, 'amount_diff'] = matched['amount_pos'] - matched['amount_proc']
     amount_issues = matched[abs(matched['amount_diff']) > 0.01].copy()
     print(f"Amount discrepancies: {len(amount_issues)} transactions")
     
@@ -130,11 +201,15 @@ def main():
     amount_diff_mask = matched_mask & (abs(reconciled['amount_diff']) > 0.01) & ~decimal_shift_mask
     reconciled.loc[amount_diff_mask, 'discrepancy_type'] = 'Amount Discrepancy'
     
-    # Export to CSV
-    output_path = "data/processed/reconciliation_results.csv"
-    ensure_directory_exists(output_path)
-    reconciled.to_csv(output_path, index=False)
-    print(f"Reconciliation results exported to {output_path}")
+    # Save results to S3
+    results_local_path = "data/processed/reconciliation_results.csv"
+    ensure_directory_exists(results_local_path)
+    reconciled.to_csv(results_local_path, index=False)
+    
+    # Upload results to S3 - store in a results folder
+    results_s3_key = "results/reconciliation_results.csv"
+    upload_results_to_s3(results_local_path, bucket_name, results_s3_key)
+    print(f"Reconciliation results uploaded to S3: s3://{bucket_name}/{results_s3_key}")
     
     # Generate summary statistics
     summary = {
@@ -174,6 +249,18 @@ def main():
                 f.write(f"{index}: {value}\n")
                 
     print(f"\nSummary saved to {summary_path}")
+    
+    # Upload chart to S3
+    chart_local_path = "data/processed/reconciliation_chart.png"
+    chart_s3_key = "results/reconciliation_chart.png"
+    upload_results_to_s3(chart_local_path, bucket_name, chart_s3_key)
+    print(f"Chart uploaded to S3: s3://{bucket_name}/{chart_s3_key}")
+    
+    # Clean up temporary files
+    if os.path.exists(pos_db_path):
+        os.unlink(pos_db_path)
+    if os.path.exists(proc_db_path):
+        os.unlink(proc_db_path)
     
     print("\n----- Reconciliation Complete -----")
     print("""

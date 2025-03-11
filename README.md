@@ -18,15 +18,14 @@ This system identifies and analyzes discrepancies between point-of-sale and paym
 ## Dataset Highlights
 
 - **Synthetic Dataset**: Created to simulate both POS and processor sides of transactions (typically not available in a single dataset - especially not in a public context)
-- **Transaction Volume**: 25,500 POS / 23,750 processor records
-- **Financial Scope**: $304,696.16 POS / $308,041.75 processor total
-- **Reconciliation Gap**: $3,345.59 net discrepancy
-- **Error Distribution**:
-  - Missing Transactions: 5.0% (1,250 records)
-  - Decimal Shift Errors: 1.9% (475 records)
-  - Double Charges: 2.0% (500 records)
-  - Timing Mismatches: 4.7% (1,187 records)
-  - Amount Discrepancies: 2.8% (712 records)
+- **Transaction Volume**: 25,500 POS / 23,750 processor records (25,984 total after merge)
+- **Discrepancy Analysis**:
+  - Missing Transactions: 6.8% (1,729 records)
+  - Amount Discrepancies: 6.2% (1,592 records)
+  - Decimal Shift Errors: 1.8% (464 records)
+- **Status**: Successfully processed and reconciled using both local and cloud-based approaches
+- **Data Processing**: Implemented with pandas DataFrame operations and proper indexing for performance
+- **Quality Control**: Includes automatic error detection and classification with configurable thresholds
 
 ## Technical Implementation
 
@@ -37,12 +36,46 @@ This system identifies and analyzes discrepancies between point-of-sale and paym
 - Multiple card number formats based on retail industry standards
 - POS-to-processor transaction pairing with controlled error scenarios
 
-### Reconciliation Engine
+### Database Implementation
 
-- Transaction matching using multi-field comparison algorithms
-- Error categorization based on discrepancy patterns
-- Timing validation with configurable tolerances
-- Financial integrity validation with proper decimal handling
+- Separate SQLite databases for POS and processor systems using DB Browser for SQLite:
+  - **POS Database**: Contains gift card data (1,000+ records) and transaction data (25,500 records)
+  - **Processor Database**: Contains matched processor transactions (23,750 records)
+- Optimized with strategic indexes on reconciliation-critical fields:
+  - Card ID indexes for relationship tracking
+  - Timestamp indexes for temporal analysis
+  - Batch ID and reference ID indexes for transaction pairing
+- Structured to simulate real-world separation between systems
+- SQL query access for advanced reconciliation analysis
+
+### Reconciliation Implementation
+
+- **Python-based reconciliation engine** rather than notebook-based approach for better production readiness
+- **Direct AWS S3 data access** using boto3 for cloud-based reconciliation:
+  - Reads SQLite databases directly from S3 bucket
+  - Avoids local file dependencies for cloud-native operation
+- Multi-stage discrepancy detection:
+  - Reference-based transaction matching across systems
+  - Amount comparison with tolerance thresholds
+  - Decimal shift detection algorithms
+  - Missing transaction identification
+- Results exported as structured CSV for further analysis
+- Visual summary charts generated for quick pattern identification
+
+### AWS Integration
+
+- SQLite databases stored in S3 for cloud-based access
+- AWS credential management through environment variables
+- Cloud-ready architecture demonstrating:
+  - S3 for data storage
+  - Secure credential handling
+  - Cross-system data access patterns
+- Production-ready design aligned with AWS best practices
+  - Scalable to Redshift implementation
+  - Compatible with AWS Glue ETL processes
+  - Structured for QuickSight visualization integration
+
+The reconciliation system demonstrates both local processing capabilities and cloud integration patterns that would be implemented in a production environment.
 
 ### Error Detection
 
