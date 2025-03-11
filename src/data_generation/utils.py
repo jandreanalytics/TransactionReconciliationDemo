@@ -4,121 +4,58 @@ Utility functions for gift card data generation
 import random
 from datetime import datetime, timedelta
 import string
-import uuid
 from config import STORE_CONFIG, CARD_CONFIG, ERROR_CONFIG, TRANSACTION_TYPES
 
+# Simplify card number generation
 def generate_card_number(pattern_key='store', store_id=None):
-    """
-    Generate a card number using the pattern specified in config
-    
-    Parameters:
-    - pattern_key: Which pattern from CARD_CONFIG to use
-    - store_id: Override store ID if needed
-    
-    Returns:
-    - A formatted card number string
-    """
+    """Generate a card number using the pattern specified in config"""
     if store_id is None:
         store_id = STORE_CONFIG['store_id']
     
-    # Get the pattern from config
-    pattern = CARD_CONFIG['patterns'].get(pattern_key)
-    
-    if not pattern:
-        raise ValueError(f"Pattern key '{pattern_key}' not found in CARD_CONFIG")
-    
-    # Generate random digits based on the pattern
+    # Simple pattern-based generation
     if pattern_key == 'retail':
-        # For retail pattern with 3 groups of 4 digits
-        digits_1 = random.randint(1000, 9999)
-        digits_2 = random.randint(1000, 9999)
-        digits_3 = random.randint(1000, 9999)
-        return f"6073-{digits_1:04d}-{digits_2:04d}-{digits_3:04d}"
+        # Simpler retail pattern (no formatting complexity)
+        digits = random.randint(1000000000000000, 9999999999999999)
+        return str(digits)
     
     elif pattern_key == 'store':
-        # For store-specific pattern
-        digits = random.randint(1, 999999)
-        return pattern.format(store=store_id, digits=digits)
+        # Basic store pattern
+        digits = random.randint(1000, 9999)
+        return f"GC-{store_id}-{digits}"
     
     elif pattern_key == 'amazon':
-        # For Amazon-style alphanumeric pattern
-        char_part = ''.join(random.choices(string.ascii_uppercase, k=2))
-        digits_1 = random.randint(10, 99)
-        char_part2 = ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
-        digits_2 = random.randint(1000, 9999)
-        return f"{char_part}{digits_1}-{char_part2}-{digits_2}"
-    
-    elif pattern_key == 'microsoft':
-        # For Microsoft-style pattern
-        digits_1 = random.randint(1000, 9999)
+        # Simplified Amazon pattern
         chars = ''.join(random.choices(string.ascii_uppercase, k=4))
-        digits_2 = random.randint(1000, 9999)
-        return f"MSFT-{digits_1:04d}-{chars}-{digits_2:04d}"
+        digits = random.randint(1000, 9999)
+        return f"{chars}-{digits}"
     
-    # Default fallback - just use a simple format
-    return f"GC-{random.randint(100000, 999999)}"
+    # Default fallback
+    return f"CARD-{random.randint(10000, 99999)}"
 
+# Keep this function simple
 def is_business_hours(timestamp):
-    """
-    Check if timestamp is during business hours
-    
-    Parameters:
-    - timestamp: datetime object
-    
-    Returns:
-    - Boolean: True if within business hours
-    """
-    # Extract the hour from timestamp
+    """Check if timestamp is during business hours"""
     hour = timestamp.hour
-    
-    # Check if hour is within business hours
     return STORE_CONFIG['hours']['open'] <= hour < STORE_CONFIG['hours']['close']
 
-def generate_transaction_time(base_date, peak_hour_bias=0.7):
-    """
-    Generate realistic transaction timestamp biased toward peak hours
+# Simplify transaction time generation
+def generate_transaction_time(base_date):
+    """Generate transaction timestamp during business hours"""
+    # Basic business hour constraint
+    store_open = STORE_CONFIG['hours']['open']
+    store_close = STORE_CONFIG['hours']['close']
     
-    Parameters:
-    - base_date: date to use
-    - peak_hour_bias: probability of transaction during peak hours (0.0-1.0)
+    # Simple random hour selection
+    hour = random.randint(store_open, store_close - 1)
+    # Peak hours get higher probability (basic implementation)
+    for start, end in STORE_CONFIG['peak_hours']:
+        if random.random() < 0.6:  # 60% chance to use peak hours
+            hour = random.randint(start, end - 1)
+            break
     
-    Returns:
-    - datetime object with realistic transaction time
-    """
-    # Decide whether to use peak hours based on bias
-    use_peak_hours = random.random() < peak_hour_bias
-    
-    if use_peak_hours:
-        # Choose one of the peak hour ranges randomly
-        peak_range = random.choice(STORE_CONFIG['peak_hours'])
-        # Select a random hour within that range
-        hour = random.randint(peak_range[0], peak_range[1] - 1)
-    else:
-        # Select a random hour within business hours, excluding peak hours
-        store_open = STORE_CONFIG['hours']['open']
-        store_close = STORE_CONFIG['hours']['close']
-        
-        # Create a list of all business hours
-        all_hours = list(range(store_open, store_close))
-        
-        # Remove peak hours from the list
-        for peak_start, peak_end in STORE_CONFIG['peak_hours']:
-            for h in range(peak_start, peak_end):
-                if h in all_hours:
-                    all_hours.remove(h)
-        
-        # Select a random hour from remaining business hours
-        if all_hours:  # Make sure we have non-peak hours
-            hour = random.choice(all_hours)
-        else:
-            # Fallback if all business hours are peak hours
-            hour = random.randint(store_open, store_close - 1)
-    
-    # Generate random minute and second
     minute = random.randint(0, 59)
     second = random.randint(0, 59)
     
-    # Combine with base_date
     return datetime(
         year=base_date.year, 
         month=base_date.month, 
@@ -128,50 +65,18 @@ def generate_transaction_time(base_date, peak_hour_bias=0.7):
         second=second
     )
 
-def calculate_processor_delay(error_rate=None):
-    """
-    Calculate realistic delay between POS and processor timestamps
-    
-    Parameters:
-    - error_rate: if specified, chance of problematic delay
-    
-    Returns:
-    - delay in seconds
-    """
-    # Determine if we should use normal or delayed timing
-    if error_rate is None:
-        error_rate = ERROR_CONFIG['rates']['timing_mismatch']
-    
-    # Determine if this transaction has a timing issue
-    has_timing_issue = random.random() < error_rate
-    
-    if has_timing_issue:
-        # Use the delayed timing range
-        min_delay, max_delay = ERROR_CONFIG['timing_delays']['delayed']
-    else:
-        # Use the normal timing range
-        min_delay, max_delay = ERROR_CONFIG['timing_delays']['normal']
-    
-    # Return a random delay within the appropriate range
-    return random.randint(min_delay, max_delay)
+# Basic delay calculator
+def calculate_processor_delay():
+    """Calculate delay between POS and processor timestamps"""
+    # Simplify to basic delay - no complex logic
+    if random.random() < 0.1:  # 10% chance of longer delay
+        return random.randint(30, 120)  # 30-120 seconds
+    return random.randint(1, 10)  # 1-10 seconds normally
 
+# Straightforward error chance function
 def should_inject_error(error_type):
-    """
-    Determine if a specific error should be injected
-    
-    Parameters:
-    - error_type: type of error from ERROR_CONFIG['rates']
-    
-    Returns:
-    - Boolean: True if error should be injected
-    """
-    if error_type not in ERROR_CONFIG['rates']:
-        return False
-    
-    # Get error rate for this type
-    error_rate = ERROR_CONFIG['rates'][error_type]
-    
-    # Randomly determine if we should inject the error
+    """Determine if an error should occur"""
+    error_rate = ERROR_CONFIG['rates'].get(error_type, 0.0)
     return random.random() < error_rate
 
 def apply_decimal_shift(amount, error_probability=None):

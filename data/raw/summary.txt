@@ -1,0 +1,10 @@
+Transaction Reconciliation Summary
+=================================
+
+POS Transactions: 25500
+Processor Transactions: 23750
+Count Difference: 1750
+
+POS Total Amount: $304696.16
+Processor Total Amount: $308041.75
+Amount Difference: $-3345.59
