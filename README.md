@@ -7,6 +7,23 @@
 
 This system identifies and analyzes discrepancies between point-of-sale and payment processor gift card transaction data. It demonstrates automated reconciliation techniques, error detection algorithms, and data quality visualization - core capabilities for ensuring financial data integrity in payment systems.
 
+## Case Study Context
+
+This project demonstrates my approach to financial data quality and reconciliation, developed as part of a technical interview process. It showcases my ability to:
+
+- Design and implement data quality controls
+- Build effective data visualization dashboards
+- Handle complex financial reconciliation scenarios
+- Work with AWS cloud architecture
+
+## Key Results
+
+- Successfully processed 25,984 transactions
+- Achieved 81.81% automated match rate
+- Identified $4,807.16 in net discrepancies
+- Reduced analysis time through pattern detection
+- Built scalable Python reconciliation engine
+
 ## Key Features
 
 - 🔄 Multi-source transaction reconciliation with 25,000+ transaction volume
@@ -26,6 +43,15 @@ This system identifies and analyzes discrepancies between point-of-sale and paym
 - **Status**: Successfully processed and reconciled using both local and cloud-based approaches
 - **Data Processing**: Implemented with pandas DataFrame operations and proper indexing for performance
 - **Quality Control**: Includes automatic error detection and classification with configurable thresholds
+
+## Technical Stack
+
+- **Python**: Core reconciliation engine
+- **Pandas**: Data processing and analysis
+- **SQLite**: Local database simulation
+- **AWS S3**: Cloud storage integration
+- **Tableau**: Data visualization
+- **Git**: Version control
 
 ## Technical Implementation
 
@@ -76,6 +102,17 @@ This system identifies and analyzes discrepancies between point-of-sale and paym
   - Structured for QuickSight visualization integration
 
 The reconciliation system demonstrates both local processing capabilities and cloud integration patterns that would be implemented in a production environment.
+
+### AWS Implementation Notes
+
+This project demonstrates AWS integration concepts through S3 connectivity while simulating more advanced AWS services that would be cost-prohibitive in a demonstration context:
+
+- **Implemented**: Direct S3 integration for data storage and retrieval
+- **Simulated**: Redshift data warehousing using SQLite with similar schema design
+- **Simulated**: QuickSight visualizations using Tableau/local visualization tools
+- **Designed for**: Easy migration to full AWS stack in a production environment
+
+The reconciliation system is architected to seamlessly transition to enterprise AWS services while avoiding unnecessary costs during development.
 
 ### Error Detection
 
@@ -144,7 +181,146 @@ This project leverages modern development tools while focusing on core data qual
 - **Manual implementation of core logic**: The reconciliation algorithms, error detection patterns, and quality control mechanisms were manually implemented to ensure proper understanding of financial data integrity principles
 - **Industry-focused approach**: The data generation serves only as a means to demonstrate the reconciliation capabilities, which are the true focus of this project and more aligned with real-world data quality analysis
 
-All data is completely synthetic and programmatically generated. No transaction data of any kind was ever shared with AI tools - AI assistance was strictly limited to code implementation patterns while maintaining strict data privacy standards.
+All data is completely synthetic and programmatically generated. No transaction data of any kind was ever shared with AI tools - AI assistance was strictly limited to helping format SQL and Python queries, with all generated code being rigorously reviewed and validated before implementation. Even though the data was synthetic, maintaining proper data handling practices was a key priority.
+
+## Dashboard Implementation
+
+### Dashboard 1: Executive Overview
+
+Primary audience: Leadership and daily monitoring
+
+KPI Cards:
+
+- **Match Rate**: 81.81%
+
+  * Below target threshold (85%)
+  * Requires immediate attention
+- **Net Difference**: -$4,807.16
+
+  * Daily average: -$155
+  * Processor showing more money than POS
+- **Transaction Volume**: 25,984
+
+  * Up 16.07% from last week
+  * Strong volume increase
+- **Error Count**: 4,726 (18.72% of total)
+
+  * Above acceptable threshold (15%)
+  * High priority for investigation
+
+Key Visualizations:
+
+1. **Discrepancy Distribution**
+
+   * Horizontal stacked bars by error type
+   * Shows relative proportions of each error
+   * Matched: 81.81%
+   * Missing in Processor: 6.65%
+   * Amount Discrepancies: 4.34%
+   * Decimal Shifts: 7.19%
+2. **Error Type Composition**
+
+   * Pie chart showing error breakdown
+   * Excludes matched transactions
+   * Hover for detailed percentages
+   * Color-coded by severity
+3. **Amount Range Analysis**
+
+   * Bar chart grouping by amount brackets
+   * Shows error concentration in each range
+   * Identifies high-risk transaction amounts
+   * Highlights decimal shift patterns
+4. **Error Heatmap**
+
+   * Shows error frequency by day/hour
+   * Darker colors = more errors
+   * Helps identify timing patterns
+
+Interactivity:
+
+- Date range filter (Last 30 days default)
+- Error type filtering
+- Cross-filtering between charts
+- Hover tooltips with details
+
+### Dashboard 2: Detailed Analysis
+
+Primary audience: Analysts and investigation teams
+
+- **Error Impact Scorecard**
+
+  * Detailed breakdown by error type
+  * Financial impact quantification
+  * Volume and percentage analysis
+- **Transaction Type Analysis (Treemap)**
+
+  * Hierarchical view of transaction categories
+  * Size represents transaction volume
+  * Color intensity shows error rate
+  * Interactive tooltips with detailed metrics
+- **Hourly Error Distribution**
+
+  * Time-based pattern visualization
+  * Day of week vs hour of day analysis
+  * Heat map showing error concentrations
+  * Helps identify systematic timing issues
+
+The two-dashboard approach separates strategic overview from tactical analysis, improving both user experience and system performance.
+
+## Project Background & Problem Statement
+
+This case study addresses a common challenge in payment systems: reconciling gift card transactions between Point-of-Sale (POS) systems and payment processors. Key issues include:
+
+- Missing transactions between systems
+- Amount discrepancies and decimal shift errors
+- Timing mismatches in transaction recording
+- Double-charge scenarios
+- Complex matching requirements
+
+## Key Achievements
+
+1. **Error Detection Success**
+
+   - Identified $4,807.16 in net discrepancies
+   - Detected 464 decimal shift errors (saving $4,640 in potential losses)
+   - Reduced investigation time through pattern recognition
+2. **Performance Metrics**
+
+   - 25,984 transactions processed in under 5 seconds
+   - 81.81% automated match rate
+   - 18.72% error rate with clear categorization
+3. **Technical Implementation**
+
+   - Built scalable Python reconciliation engine
+   - Implemented cloud-ready AWS architecture
+   - Created dual-dashboard visualization strategy
+
+## Use Case Scenarios
+
+1. **Daily Reconciliation**
+
+   - Morning review of previous day's transactions
+   - Immediate flagging of critical discrepancies
+   - Automated pattern detection
+2. **Error Investigation**
+
+   - Drill-down capability for analysts
+   - Pattern identification across terminals
+   - Root cause analysis tools
+3. **Management Reporting**
+
+   - Executive dashboard for KPIs
+   - Trend analysis and pattern detection
+   - Financial impact quantification
+
+## Design Philosophy
+
+The project follows these core principles:
+
+1. **Data Quality First**: Rigorous validation and error detection
+2. **User-Centric Design**: Separate views for different user needs
+3. **Actionable Insights**: Focus on patterns that drive improvements
+4. **Performance Optimized**: Fast processing for large transaction volumes
 
 ## License
 
